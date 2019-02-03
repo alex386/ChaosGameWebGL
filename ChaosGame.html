@@ -1,0 +1,260 @@
+<HTML>
+<HEAD>
+    <meta charset="UTF-8">
+    <meta name="description" content="Chaos game generated figures">
+    <meta name="keywords" content="Chaos,Game,JavaScript,WebGL">
+    <meta name="author" content="Aleksander Dawid">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <TITLE>Chaos Game - WebGL</TITLE>
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 pozycja;
+        uniform float movex;
+        uniform float scalef;
+
+        void
+        main()
+        {
+
+        gl_Position.x = pozycja.x;
+        gl_Position.y = pozycja.y;
+        gl_Position.z = pozycja.z;
+        gl_Position.w = pozycja.w;
+        gl_PointSize = scalef;
+
+        }
+    </script>
+    <script id="fragment-shader" type="x-shader/x-fragment">
+
+        precision mediump float;
+        uniform vec4 kolor;
+
+        void
+        main()
+        {
+        gl_FragColor = kolor;
+        }
+    </script>
+
+    <SCRIPT type="text/Javascript">
+
+        var g_points = [];
+        var c_points = [];
+        var nr_point;
+        var numb;
+        var a;
+        var shaderProgram;
+        var coord;
+        var scal;
+        var nk;
+        var gl;
+        var radius;
+
+
+        CreatPoints = function (nr) {
+            z = 0.0;
+            teta = 0;
+            jump = 360 / nr;
+            c_points = [];
+            for (var i = 0; i < nr; i++) {
+                x = radius * Math.sin(teta * Math.PI / 180);
+                y = radius * Math.cos(teta * Math.PI / 180);
+                c_points.push(x, y, z);
+                teta += jump;
+            }
+
+        }
+
+        //====================================================================================
+        // Chaos Game
+        //====================================================================================
+        InitCheckPoints = function () {
+            a = 2.0;
+            radius = 1.0;
+            nr_point = 3;
+            numb = 100000;
+            z = 0.0;
+            x = 1.0;
+            y = -1.0;
+            c_points.push(x, y, z);
+
+            x = -1.0;
+            y = -1.0;
+            c_points.push(x, y, z);
+
+            x = 1.0;
+            y = 1.0;
+            c_points.push(x, y, z);
+
+            x = -1.0;
+            y = 1.0;
+            c_points.push(x, y, z);
+        }
+        //====================================================================================
+        //===================================================================================
+        // Decription of the functions
+        //===================================================================================
+        initShaders = function (gl, vertexShaderId, fragmentShaderId) {
+            var vertShdr;
+            var fragShdr;
+
+            var vertElem = document.getElementById(vertexShaderId);
+            if (!vertElem) {
+                alert("Brak vertex shader " + vertexShaderId);
+                return -1;
+            } else {
+                vertShdr = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vertShdr, vertElem.text);
+                gl.compileShader(vertShdr);
+                if (!gl.getShaderParameter(vertShdr, gl.COMPILE_STATUS)) {
+                    var msg = "Vertex shader nie można skompilowć:" + "<pre>" + gl.getShaderInfoLog(vertShdr) + "</pre>";
+                    alert(msg);
+                    console.log(msg);
+                    return -1;
+                }
+            }
+
+            var fragElem = document.getElementById(fragmentShaderId);
+            if (!fragElem) {
+                alert("Brak fragment shader " + fragmentShaderId);
+                return -1;
+            } else {
+                fragShdr = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fragShdr, fragElem.text);
+                gl.compileShader(fragShdr);
+                if (!gl.getShaderParameter(fragShdr, gl.COMPILE_STATUS)) {
+                    var msg = "Fragment shader nie można skompilowć:" + "<pre>" + gl.getShaderInfoLog(fragShdr) + "</pre>";
+                    alert(msg);
+                    console.log(msg);
+                    return -1;
+                }
+            }
+
+            var program = gl.createProgram();
+            gl.attachShader(program, vertShdr);
+            gl.attachShader(program, fragShdr);
+            gl.linkProgram(program);
+
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                var msg = "Shader program nie można zlinkować:" + "<pre>" + gl.getProgramInfoLog(program) + "</pre>";
+                alert(msg);
+                console.log(msg);
+                return -1;
+            }
+
+            return program;
+        }
+
+
+
+        function startGL() {
+
+
+            var canvas = document.getElementById("glid");
+
+            InitCheckPoints();
+
+            gl = null;
+
+            try {
+                gl = canvas.getContext("experimental-webgl");
+            }
+            catch (e) {
+            }
+
+            if (!gl) {
+                alert("Brak wsparcia sprzętowego dla OpenGL (WebGL)");
+                return;
+            }
+
+            if (gl) {
+
+
+                shaderProgram = initShaders(gl, "vertex-shader", "fragment-shader");
+                gl.useProgram(shaderProgram);
+                coord = gl.getAttribLocation(shaderProgram, "pozycja");
+                scal = gl.getUniformLocation(shaderProgram, "scalef");
+                nk = gl.getUniformLocation(shaderProgram, "kolor");
+
+                GraphFefresh();
+            }
+
+        }
+
+        GraphFefresh = function () {
+            var aPar = document.getElementById("par_a");
+            var nrPar = document.getElementById("par_nr");
+            var numbPar = document.getElementById("par_numb");
+            var radiusPar = document.getElementById("par_radius");
+            aPar.value = a;
+            nrPar.value = nr_point;
+            numbPar.value = numb;
+            radiusPar.value = radius;
+            gl.clearColor(1.0, 1.0, 1.0, 1.0); //Ustawienie koloru tła (czerwony)
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            CreatPoints(nr_point);
+            gl.uniform1f(scal, 5.0);
+            gl.uniform4f(nk, 1.0, 0.0, 0.0, 1.0);
+            for (var i = 0; i < c_points.length; i += 3) {
+                gl.vertexAttrib4f(coord, c_points[i], c_points[i + 1], c_points[i + 2], 1.0);
+                gl.drawArrays(gl.POINTS, 0, 1);
+            }
+
+            gl.uniform4f(nk, 0.0, 0.0, 0.0, 1.0);
+            gl.uniform1f(scal, 1.0);
+
+            k = 0;
+            z = 0.0;
+            x = 0.0;
+            y = 0.0;
+            g_points = [];
+
+
+            for (var i = 0; i < numb; i++) {
+
+                n = Math.floor(Math.random() * nr_point)
+                pX = c_points[3 * n];
+                pY = c_points[3 * n + 1];
+                pZ = c_points[3 * n + 2];
+
+                x = x - (x - pX) / a;
+                y = y - (y - pY) / a;
+
+                g_points.push(x, y, z);
+                gl.vertexAttrib4f(coord, g_points[k], g_points[k + 1], g_points[k + 2], 1.0);
+                gl.drawArrays(gl.POINTS, 0, 1);
+                k += 3;
+            }
+
+        }
+
+        RefGL = function () {
+            var aPar = document.getElementById("par_a");
+            var nrPar = document.getElementById("par_nr");
+            var numbPar = document.getElementById("par_numb");
+            var radiusPar = document.getElementById("par_radius");
+            a = aPar.value;
+            nr_point = nrPar.value;
+            numb = numbPar.value;
+            radius = radiusPar.value;
+            GraphFefresh();
+        }
+
+
+    </SCRIPT>
+</HEAD>
+
+ <BODY onload="startGL()" bgcolor="white">
+     <H1>Chaos Game</H1>
+     <canvas id="glid" width="500" height="500">
+         Brak wsparcia dla technologii HTML5
+     </canvas>
+     <br />
+     <span>Division: </span><input type="text" id="par_a" size="10" /><br />
+     <span>#Check points: </span><input type="text" id="par_nr" size="10" /><br />
+     <span>#Plot points: </span><input type="text" id="par_numb" size="10" /><br />
+     <span>Radius: </span><input type="text" id="par_radius" size="10" /><br />
+     <input type="button" value="Refresh" OnClick="RefGL()" />
+
+ </BODY>
+</HTML>
